@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Page d'Administration</title>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            padding: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        table, th, td {
+            border: 1px solid #ccc;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+        }
+        textarea {
+            width: 100%;
+            height: 100px;
+            font-size: 16px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-sizing: border-box;
+            margin-bottom: 20px;
+        }
+        #submissions {
+            padding: 10px;
+            background-color: #fff;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            margin-top: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>Page d'Administration</h1>
+    
+    <h2>Messages Reçus</h2>
+    <div id="submissions"></div>
+    
+    <h2>Répondre au Message</h2>
+    <form id="response-form">
+        <label for="response-latex">Écrivez votre réponse en LaTeX :</label><br>
+        <textarea id="response-latex" placeholder="Entrez votre réponse en LaTeX ici..."></textarea><br><br>
+        
+        <input type="hidden" id="current-message-id">
+        <button type="submit">Envoyer Réponse</button>
+    </form>
+    
+    <script>
+        function renderMath() {
+            const latexInputs = document.querySelectorAll('.latex-input');
+            latexInputs.forEach(input => {
+                MathJax.typesetPromise([input]);
+            });
+        }
+        
+        function loadSubmissions() {
+            const submissions = JSON.parse(localStorage.getItem('submissions') || '[]');
+            const submissionsDiv = document.getElementById('submissions');
+            submissionsDiv.innerHTML = '';
+            
+            submissions.forEach((submission, index) => {
+                const responseHtml = submission.response ? `
+                    <div>
+                        <div class="latex-input">${submission.response.latex}</div>
+                        <p><strong>Réponse :</strong> ${submission.response.text}</p>
+                        <p><strong>Date :</strong> ${new Date(submission.response.date).toLocaleString()}</p>
+                    </div>
+                ` : '';
+
+                const submissionHtml = `
+                    <div>
+                        <h3>Message de ${submission.firstName} ${submission.lastName}</h3>
+                        <div class="latex-input">${submission.latex}</div>
+                        <p><strong>Date :</strong> ${new Date(submission.date).toLocaleString()}</p>
+                        ${responseHtml}
+                        <button onclick="editResponse(${index})">Répondre</button>
+                    </div>
+                `;
+                submissionsDiv.innerHTML += submissionHtml;
+            });
+
+            renderMath();
+        }
+
+        function editResponse(index) {
+            const submissions = JSON.parse(localStorage.getItem('submissions') || '[]');
+            const submission = submissions[index];
+            document.getElementById('current-message-id').value = index;
+            document.getElementById('response-latex').value = '';
+            document.getElementById('response-form').onsubmit = function(event) {
+                event.preventDefault();
+                const responseLatex = document.getElementById('response-latex').value;
+                const responseText = responseLatex;
+                submission.response = {
+                    latex: responseLatex,
+                    text: responseText,
+                    date: new Date().toISOString()
+                };
+                submissions[index] = submission;
+                localStorage.setItem('submissions', JSON.stringify(submissions));
+                loadSubmissions();
+                document.getElementById('response-latex').value = '';
+            };
+        }
+
+        window.onload = loadSubmissions;
+    </script>
+</body>
+</html>
